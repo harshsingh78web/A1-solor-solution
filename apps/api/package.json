@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=../../.env --watch --import tsx src/server.ts",
-    "prestart": "npm run build -w @a1/validation",
+    "prestart": "npm run build -w @a1/validation && npm run build -w @a1/api",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
