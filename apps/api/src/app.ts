@@ -40,6 +40,8 @@ const allowedOrigins = new Set(
   [
     process.env.WEB_URL ?? "http://localhost:5173",
     process.env.CLIENT_URL,
+    "https://a1-solor-solution.vercel.app",
+    "https://a1-solor-solution-668f.vercel.app",
     ...(process.env.CORS_ALLOWED_ORIGINS ?? "").split(","),
   ]
     .map((origin) => origin?.trim().replace(/\/$/, ""))
