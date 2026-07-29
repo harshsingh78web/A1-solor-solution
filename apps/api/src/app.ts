@@ -36,9 +36,15 @@ app.use((req, res, next) => {
   next();
 });
 app.use(helmet({ contentSecurityPolicy: false }));
-const allowedOrigins = new Set([
-  process.env.WEB_URL ?? "http://localhost:5173",
-]);
+const allowedOrigins = new Set(
+  [
+    process.env.WEB_URL ?? "http://localhost:5173",
+    process.env.CLIENT_URL,
+    ...(process.env.CORS_ALLOWED_ORIGINS ?? "").split(","),
+  ]
+    .map((origin) => origin?.trim().replace(/\/$/, ""))
+    .filter((origin): origin is string => Boolean(origin)),
+);
 const isAllowedVercelOrigin = (origin: string) => {
   try {
     const url = new URL(origin);
@@ -68,6 +74,8 @@ app.use(
       return callback(new Error("Origin is not allowed by CORS"));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(compression());

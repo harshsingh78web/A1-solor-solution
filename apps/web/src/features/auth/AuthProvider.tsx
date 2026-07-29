@@ -9,11 +9,17 @@ interface AuthValue {
   signIn(email:string,password:string):Promise<void>; signOut():Promise<void>; refreshProfile():Promise<void>;
 }
 const AuthContext=createContext<AuthValue|null>(null);
+let currentProfileRequest:{token:string;promise:Promise<CurrentUser>}|null=null;
 async function fetchCurrent(session:Session):Promise<CurrentUser>{
- const response=await fetch(`${apiBaseUrl}/auth/me`,{headers:{Authorization:`Bearer ${session.access_token}`}});
- const body=await response.json() as {success:boolean;message:string;data?:{user:{id:string;email:string;full_name:string;active:boolean};roles:string[];permissions:string[]}};
- if(!response.ok||!body.data) throw new Error(body.message);
- return {id:body.data.user.id,email:body.data.user.email,fullName:body.data.user.full_name,active:body.data.user.active,roles:body.data.roles,permissions:body.data.permissions};
+ if(currentProfileRequest?.token===session.access_token)return currentProfileRequest.promise;
+ const promise=(async()=>{
+  const response=await fetch(`${apiBaseUrl}/auth/me`,{credentials:"include",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`}});
+  const body=await response.json() as {success:boolean;message:string;data?:{user:{id:string;email:string;full_name:string;active:boolean};roles:string[];permissions:string[]}};
+  if(!response.ok||!body.data) throw new Error(body.message);
+  return {id:body.data.user.id,email:body.data.user.email,fullName:body.data.user.full_name,active:body.data.user.active,roles:body.data.roles,permissions:body.data.permissions};
+ })();
+ currentProfileRequest={token:session.access_token,promise};
+ try{return await promise}finally{if(currentProfileRequest?.promise===promise)currentProfileRequest=null}
 }
 export function AuthProvider({children}:{children:React.ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[user,setUser]=useState<CurrentUser|null>(null);
