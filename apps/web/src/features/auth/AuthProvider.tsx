@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { apiBaseUrl } from "../../lib/api-base";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
 export interface CurrentUser { id:string; email:string; fullName:string; active:boolean; roles:string[]; permissions:string[] }
@@ -9,8 +10,7 @@ interface AuthValue {
 }
 const AuthContext=createContext<AuthValue|null>(null);
 async function fetchCurrent(session:Session):Promise<CurrentUser>{
- const api=import.meta.env.VITE_API_URL??(import.meta.env.DEV?"http://localhost:5000/api/v1":"/api/v1");
- const response=await fetch(`${api}/auth/me`,{headers:{Authorization:`Bearer ${session.access_token}`}});
+ const response=await fetch(`${apiBaseUrl}/auth/me`,{headers:{Authorization:`Bearer ${session.access_token}`}});
  const body=await response.json() as {success:boolean;message:string;data?:{user:{id:string;email:string;full_name:string;active:boolean};roles:string[];permissions:string[]}};
  if(!response.ok||!body.data) throw new Error(body.message);
  return {id:body.data.user.id,email:body.data.user.email,fullName:body.data.user.full_name,active:body.data.user.active,roles:body.data.roles,permissions:body.data.permissions};
