@@ -5,7 +5,7 @@
   "outputDirectory": "apps/web/dist",
   "rewrites": [
     {
-      "source": "/((?!assets/|robots.txt|sitemap.xml).*)",
+      "source": "/((?!api/|assets/|robots.txt|sitemap.xml).*)",
       "destination": "/index.html"
     }
   ]

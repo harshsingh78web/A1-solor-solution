@@ -9,7 +9,7 @@ interface AuthValue {
 }
 const AuthContext=createContext<AuthValue|null>(null);
 async function fetchCurrent(session:Session):Promise<CurrentUser>{
- const api=import.meta.env.VITE_API_URL??"http://localhost:5000/api/v1";
+ const api=import.meta.env.VITE_API_URL??(import.meta.env.DEV?"http://localhost:5000/api/v1":"/api/v1");
  const response=await fetch(`${api}/auth/me`,{headers:{Authorization:`Bearer ${session.access_token}`}});
  const body=await response.json() as {success:boolean;message:string;data?:{user:{id:string;email:string;full_name:string;active:boolean};roles:string[];permissions:string[]}};
  if(!response.ok||!body.data) throw new Error(body.message);
