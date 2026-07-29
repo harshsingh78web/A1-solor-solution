@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
 import compression from "compression";
 import cors from "cors";
 import express, {
@@ -128,6 +129,23 @@ app.get("/api/v1/leads", (req, res, next) => {
     return next(error);
   }
 });
+if (process.env.NODE_ENV === "production") {
+  const webDist = fileURLToPath(new URL("../../web/dist/", import.meta.url));
+  const webIndex = fileURLToPath(
+    new URL("../../web/dist/index.html", import.meta.url),
+  );
+  app.use(express.static(webDist));
+  app.use((req, res, next) => {
+    if (
+      req.method === "GET" &&
+      !req.path.startsWith("/api/") &&
+      req.accepts("html")
+    ) {
+      return res.sendFile(webIndex);
+    }
+    return next();
+  });
+}
 app.use((_req, res) =>
   res.status(404).json({
     success: false,
