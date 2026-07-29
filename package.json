@@ -2,7 +2,10 @@
   "name": "a1-solar-platform",
   "private": true,
   "version": "1.0.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w @a1/web\" \"npm run dev -w @a1/api\"",
     "build": "npm run build -ws --if-present",
@@ -29,5 +32,8 @@
     "prettier": "^3.6.2",
     "supabase": "^2.33.9",
     "typescript": "^5.8.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.62.3"
   }
 }
