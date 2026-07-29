@@ -39,6 +39,18 @@ app.use(helmet({ contentSecurityPolicy: false }));
 const allowedOrigins = new Set([
   process.env.WEB_URL ?? "http://localhost:5173",
 ]);
+const isAllowedVercelOrigin = (origin: string) => {
+  try {
+    const url = new URL(origin);
+    return (
+      process.env.VERCEL === "1" &&
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".vercel.app")
+    );
+  } catch {
+    return false;
+  }
+};
 if (process.env.NODE_ENV !== "production") {
   allowedOrigins.add("http://localhost:5173");
   allowedOrigins.add("http://localhost:5174");
@@ -47,7 +59,12 @@ if (process.env.NODE_ENV !== "production") {
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      if (
+        !origin ||
+        allowedOrigins.has(origin) ||
+        isAllowedVercelOrigin(origin)
+      )
+        return callback(null, true);
       return callback(new Error("Origin is not allowed by CORS"));
     },
     credentials: true,
