@@ -9,3 +9,4 @@ test-results
 .auth
 .DS_Store
 *.log
+*.tsbuildinfo
