@@ -1,1 +1,13 @@
-{"name":"@a1/validation","version":"1.0.0","type":"module","main":"src/index.ts","types":"src/index.ts","dependencies":{"zod":"^3.25.76"}}
+{
+  "name": "@a1/validation",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

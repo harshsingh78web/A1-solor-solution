@@ -1,7 +1,13 @@
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-config({path:fileURLToPath(new URL("../../../.env",import.meta.url)),quiet:true,override:true});
+if (process.env.NODE_ENV !== "production") {
+  config({
+    path: fileURLToPath(new URL("../../../.env", import.meta.url)),
+    quiet: true,
+    override: false,
+  });
+}
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(5000),
