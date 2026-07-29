@@ -1,9 +1,11 @@
-const productionApiUrl = "https://a1-solor-solution-2.onrender.com";
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const frontendHostname = window.location.hostname.toLowerCase();
+const isLocalFrontend =
+  frontendHostname === "localhost" || frontendHostname === "127.0.0.1";
 
-const selectedApiUrl = import.meta.env.PROD
-  ? productionApiUrl
-  : configuredApiUrl || "http://localhost:5000";
+const selectedApiUrl = isLocalFrontend
+  ? configuredApiUrl || "http://localhost:5000"
+  : window.location.origin;
 
 const apiOrigin = selectedApiUrl.replace(/\/+$/, "");
 
