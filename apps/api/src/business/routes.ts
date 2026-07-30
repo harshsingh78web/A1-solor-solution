@@ -27,6 +27,15 @@ const invoiceNumber = () =>
   `A1-${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
 const sha512 = (value: string) =>
   crypto.createHash("sha512").update(value).digest("hex");
+const publicUrl = (value: string | undefined, fallback: string) => {
+  const candidate = value?.trim();
+  if (
+    !candidate ||
+    /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(candidate)
+  )
+    return fallback;
+  return candidate.replace(/\/$/, "");
+};
 const payuConfig = () => {
   const key = process.env.PAYU_MERCHANT_KEY,
     salt = process.env.PAYU_MERCHANT_SALT,
@@ -872,10 +881,11 @@ agreementsRouter.post(
       hash = sha512(
         `${config.key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}||||||||||${config.salt}`,
       ),
-      publicApi =
-        process.env.PUBLIC_API_URL ??
-        `${process.env.API_URL ?? "http://localhost:5000"}/api/v1`,
-      callback = `${publicApi.replace(/\/$/, "")}/payments/payu/callback`;
+      publicApi = publicUrl(
+        process.env.PUBLIC_API_URL,
+        "https://a1-solor-solution.vercel.app/api/v1",
+      ),
+      callback = `${publicApi}/payments/payu/callback`;
     const { error } = await db().from("agreement_payment_requests").upsert(
       {
         agreement_id: agreement.id,
@@ -973,7 +983,10 @@ export const payuCallback = asyncHandler(async (req, res) => {
         ? `${additionalCharges}|${reverseSequence}`
         : reverseSequence,
     ),
-    web = (process.env.WEB_URL ?? "http://localhost:5173").replace(/\/$/, "");
+    web = publicUrl(
+      process.env.WEB_URL,
+      "https://a1-solor-solution.vercel.app",
+    );
   const redirect = (result: "success" | "failed") =>
     res.redirect(303, `${web}/app/agreements?payment=${result}`);
   if (

@@ -1647,6 +1647,7 @@ export function AgreementsPage() {
     [customers, setCustomers] = useState<QuoteCustomer[]>([]),
     [quotes, setQuotes] = useState<Row[]>([]),
     [open, setOpen] = useState(false),
+    [payingId, setPayingId] = useState<string | null>(null),
     [loading, setLoading] = useState(true);
   const isCustomer = Boolean(user?.roles.includes("customer"));
   const canCreate =
@@ -1727,16 +1728,22 @@ export function AgreementsPage() {
     }
   };
   const submitPayment = async (row: Row) => {
+    const agreementId = text(row.id);
+    if (!agreementId || payingId) return;
+    setPayingId(agreementId);
     try {
       const checkout = await api<{
         action: string;
         fields: Record<string, string>;
-      }>(`/agreements/${text(row.id)}/payu-checkout`, {
+      }>(`/agreements/${agreementId}/payu-checkout`, {
         method: "POST",
       });
       const form = document.createElement("form");
       form.method = "POST";
       form.action = checkout.action;
+      form.target = "_self";
+      form.acceptCharset = "UTF-8";
+      form.style.display = "none";
       Object.entries(checkout.fields).forEach(([name, value]) => {
         const input = document.createElement("input");
         input.type = "hidden";
@@ -1747,6 +1754,7 @@ export function AgreementsPage() {
       document.body.appendChild(form);
       form.submit();
     } catch (error) {
+      setPayingId(null);
       toast.error(
         error instanceof Error ? error.message : "PayU checkout failed",
       );
@@ -1889,8 +1897,14 @@ export function AgreementsPage() {
                         </button>
                       )}
                       {isCustomer && row.payment_status !== "Paid" && (
-                        <button onClick={() => void submitPayment(row)}>
-                          Pay with PayU
+                        <button
+                          type="button"
+                          disabled={payingId !== null}
+                          onClick={() => void submitPayment(row)}
+                        >
+                          {payingId === text(row.id)
+                            ? "Opening PayU…"
+                            : "Pay ₹1 with PayU"}
                         </button>
                       )}
                       {canVerifyPayment &&
