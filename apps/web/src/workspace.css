@@ -1,9 +1,12 @@
+html{scroll-behavior:smooth}
 .app-layout{grid-template-columns:248px minmax(0,1fr);background:#f4f6f5}
-.app-sidebar{background:#082f35;padding:0 14px 18px;border-right:1px solid #16454b}
+.app-sidebar{background:#082f35;padding:0 14px 18px;border-right:1px solid #16454b;scrollbar-width:none;-ms-overflow-style:none}
+.app-sidebar::-webkit-scrollbar{display:none;width:0;height:0}
 .app-logo{height:72px;padding:0 10px;border-bottom:1px solid #ffffff14;margin-bottom:14px}
 .app-logo .brandmark{width:34px;height:34px;border-radius:9px}
 .app-logo .brandmark svg{width:19px}
-.app-sidebar nav{gap:2px;overflow-y:auto;padding-right:3px;scrollbar-width:thin}
+.app-sidebar nav{gap:2px;overflow-y:auto;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none}
+.app-sidebar nav::-webkit-scrollbar{display:none;width:0;height:0}
 .app-sidebar nav a,.logout{min-height:42px;padding:9px 11px;border-radius:7px;font-size:13px;font-weight:500;letter-spacing:.01em}
 .app-sidebar nav a:hover{background:#ffffff0c;color:#fff}
 .app-sidebar nav a.active{background:#d9f64c;color:#092f35;font-weight:700;box-shadow:inset 0 0 0 1px #e6ff70}
@@ -81,6 +84,8 @@
 @media(max-width:850px){.app-layout{grid-template-columns:1fr}.app-top{height:64px;padding:0 16px}.app-page{padding:24px 16px 48px}.operational-form{grid-template-columns:1fr}.toolbar{width:100%}.toolbar input{min-width:0}.page-bar{align-items:flex-start}.role-grid{grid-template-columns:repeat(2,1fr)}.back-button span{display:none}.back-button{width:36px;padding:0;justify-content:center}.header-context{gap:8px}}
 .app-user>.mobile-back-button{display:none}
 @media(max-width:850px){.header-context>.desktop-back-button,.app-user>.desktop-notification-button{display:none}.app-user>.mobile-back-button{display:flex}}
+.app-sidebar,.app-sidebar nav{scrollbar-width:none!important;scrollbar-color:transparent transparent!important;-ms-overflow-style:none!important}
+.app-sidebar::-webkit-scrollbar,.app-sidebar nav::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;background:transparent!important}
 @media(max-width:850px){.installation-card{grid-template-columns:1fr}}
 @media(max-width:760px){.invoice-form{padding:18px}.invoice-fields,.invoice-footer{grid-template-columns:1fr}.invoice-products-head{align-items:stretch}.invoice-products-head select{width:100%}}
 @media(max-width:700px){.operational-form:has(>h2 + .detail-grid):not(.invoice-form){padding:18px}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.detail-grid{grid-template-columns:1fr}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.page-bar{align-items:stretch}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.page-bar select{width:100%}}
