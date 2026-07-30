@@ -1852,8 +1852,8 @@ export function AgreementsPage() {
       {loading ? (
         <div className="skeleton">Loading…</div>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap agreements-table-wrap">
+          <table className="agreements-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -1868,20 +1868,22 @@ export function AgreementsPage() {
             <tbody>
               {rows.map((row) => (
                 <tr key={text(row.id)}>
-                  <td>{text(row.agreement_number)}</td>
-                  <td>{text((row.customers as Row | undefined)?.name)}</td>
-                  <td>
+                  <td data-label="Agreement #">{text(row.agreement_number)}</td>
+                  <td data-label="Customer">
+                    {text((row.customers as Row | undefined)?.name)}
+                  </td>
+                  <td data-label="Address">
                     {text(
                       (row.merged_data as Row | undefined)?.consumer_address,
                     )}
                   </td>
-                  <td>
+                  <td data-label="Signature">
                     {row.customer_signature_path ? "Uploaded" : "Not uploaded"}
                   </td>
-                  <td>
+                  <td data-label="Created">
                     {new Date(String(row.created_at)).toLocaleString("en-IN")}
                   </td>
-                  <td>
+                  <td data-label="Payment">
                     <span className="pill">
                       {text(row.payment_status ?? "Unpaid")}
                     </span>
@@ -1889,7 +1891,7 @@ export function AgreementsPage() {
                       <small> · {money(row.payment_amount)}</small>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Actions">
                     <div className="row-actions">
                       {(!isCustomer || row.payment_status === "Paid") && (
                         <button onClick={() => void openAgreement(row)}>
