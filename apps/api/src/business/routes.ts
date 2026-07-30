@@ -92,21 +92,23 @@ dashboardRouter.get(
       if (error) throw error;
       return count ?? 0;
     };
-    const entries = isCustomer
-      ? ([
+    const entries: ReadonlyArray<
+      readonly [key: string, table: string, column?: string]
+    > = isCustomer
+      ? [
           ["quotations", "quotations", "customer_id"],
           ["invoices", "invoices", "customer_id"],
           ["projects", "projects", "customer_id"],
           ["tickets", "service_tickets", "customer_id"],
-        ] as const)
-      : ([
+        ]
+      : [
           ["leads", "leads"],
           ["customers", "customers"],
           ["quotations", "quotations"],
           ["invoices", "invoices"],
           ["products", "products"],
           ["staff", "profiles"],
-        ] as const);
+        ];
     const data = Object.fromEntries(
       await Promise.all(
         entries.map(async ([key, table, column]) => [
