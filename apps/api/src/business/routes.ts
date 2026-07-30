@@ -1091,129 +1091,138 @@ agreementsRouter.post(
   "/",
   requirePermission("agreements:create"),
   asyncHandler(async (req, res) => {
-    const b = req.body,
-      isCustomer = req.auth!.roles.includes("customer");
-    if (isCustomer)
-      throw new AppError(
-        403,
-        "Customers can only view and download their agreements",
-        "FORBIDDEN",
-      );
-    let agreementCustomerId = String(b.customerId ?? "");
-    if (isCustomer) {
-      agreementCustomerId = (await customerId(req.auth!.userId)) ?? "";
-      if (!agreementCustomerId)
-        throw new AppError(
-          409,
-          "Customer account is not linked to a customer record",
-          "CUSTOMER_PROFILE_NOT_LINKED",
-        );
-      const { data: ownedQuote } = await db()
-        .from("quotations")
-        .select("id")
-        .eq("id", b.quotationId)
-        .eq("customer_id", agreementCustomerId)
-        .maybeSingle();
-      if (!ownedQuote)
+    try {
+      const b = req.body,
+        isCustomer = req.auth!.roles.includes("customer");
+      if (isCustomer)
         throw new AppError(
           403,
-          "You can create an agreement only for your own quotation",
+          "Customers can only view and download their agreements",
           "FORBIDDEN",
         );
-    }
-    if (!agreementCustomerId || !b.consumerAddress || !b.agreementDate)
-      throw new AppError(
-        400,
-        "Customer, address and agreement date are required",
-        "VALIDATION_ERROR",
-      );
-    const admin = db();
-    let validQuotationId: string | null = null;
-    if (b.quotationId && String(b.quotationId).trim() !== "") {
-      const { data: selectedQuote } = await admin
-        .from("quotations")
-        .select("id,customer_id")
-        .eq("id", b.quotationId)
-        .maybeSingle();
-      if (
-        selectedQuote &&
-        String(selectedQuote.customer_id) === String(agreementCustomerId)
-      ) {
-        validQuotationId = selectedQuote.id;
+      let agreementCustomerId = String(b.customerId ?? "");
+      if (isCustomer) {
+        agreementCustomerId = (await customerId(req.auth!.userId)) ?? "";
+        if (!agreementCustomerId)
+          throw new AppError(
+            409,
+            "Customer account is not linked to a customer record",
+            "CUSTOMER_PROFILE_NOT_LINKED",
+          );
+        const { data: ownedQuote } = await db()
+          .from("quotations")
+          .select("id")
+          .eq("id", b.quotationId)
+          .eq("customer_id", agreementCustomerId)
+          .maybeSingle();
+        if (!ownedQuote)
+          throw new AppError(
+            403,
+            "You can create an agreement only for your own quotation",
+            "FORBIDDEN",
+          );
       }
-    }
-    if (!validQuotationId) {
-      const { data: latestQuote } = await admin
-        .from("quotations")
-        .select("id")
-        .eq("customer_id", agreementCustomerId)
-        .order("created_at", { ascending: false })
+      if (!agreementCustomerId || !b.consumerAddress || !b.agreementDate)
+        throw new AppError(
+          400,
+          "Customer, address and agreement date are required",
+          "VALIDATION_ERROR",
+        );
+      const admin = db();
+      let validQuotationId: string | null = null;
+      if (b.quotationId && String(b.quotationId).trim() !== "") {
+        const { data: selectedQuote } = await admin
+          .from("quotations")
+          .select("id,customer_id")
+          .eq("id", b.quotationId)
+          .maybeSingle();
+        if (
+          selectedQuote &&
+          String(selectedQuote.customer_id) === String(agreementCustomerId)
+        ) {
+          validQuotationId = selectedQuote.id;
+        }
+      }
+      if (!validQuotationId) {
+        const { data: latestQuote } = await admin
+          .from("quotations")
+          .select("id")
+          .eq("customer_id", agreementCustomerId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestQuote) validQuotationId = latestQuote.id;
+      }
+      const { data: foundTemplate, error: templateError } = await admin
+        .from("agreement_templates")
+        .select("id,version")
+        .eq("active", true)
+        .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (latestQuote) validQuotationId = latestQuote.id;
-    }
-    let { data: template, error: templateError } = await admin
-      .from("agreement_templates")
-      .select("id,version")
-      .eq("active", true)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (templateError) {
-      throw new AppError(400, templateError.message, "DATABASE_ERROR");
-    }
-    if (!template) {
-      const { data: newTemplate, error: createError } = await admin
-        .from("agreement_templates")
-        .insert({
-          name: "PM Surya Ghar Consumer Vendor Agreement",
-          scheme_name: "PM Surya Ghar: Muft Bijli Yojana",
-          version: 1,
-          body: {
-            title:
-              "Agreement between Consumer and Vendor for installation of a grid-connected rooftop solar project",
-            sections: [
-              "Consumer and vendor identification",
-              "Project purpose",
-              "Consumer responsibilities",
-              "Vendor responsibilities",
-              "Site survey and feasibility",
-              "Design and engineering",
-              "Procurement and supply",
-              "Installation and documentation",
-              "Warranty and maintenance",
-              "Grid connectivity",
-              "Subsidy documentation",
-              "Plant performance",
-              "Payment and disputes",
-              "Signatures and disclaimer",
-            ],
-          },
-          active: true,
-        })
-        .select("id,version")
-        .single();
-
-      if (createError || !newTemplate) {
-        throw new AppError(
-          409,
-          "No active agreement template is configured",
-          "TEMPLATE_NOT_CONFIGURED",
-        );
+      if (templateError) {
+        console.error("Agreement template fetch error:", templateError);
+        throw new AppError(500, templateError.message, "DATABASE_ERROR");
       }
-      template = newTemplate;
-    }
-    const creatorId = req.auth?.userId;
-    let validCreatedBy: string | null = null;
-    if (creatorId) {
-      const { data: userProfile } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("id", creatorId)
-        .maybeSingle();
-      if (userProfile) validCreatedBy = creatorId;
-    }
-    try {
+      let template: { id: string; version: number } | null = foundTemplate;
+      if (!template) {
+        const { data: newTemplate, error: createError } = await admin
+          .from("agreement_templates")
+          .insert({
+            name: "PM Surya Ghar Consumer Vendor Agreement",
+            scheme_name: "PM Surya Ghar: Muft Bijli Yojana",
+            version: 1,
+            body: {
+              title:
+                "Agreement between Consumer and Vendor for installation of a grid-connected rooftop solar project",
+              sections: [
+                "Consumer and vendor identification",
+                "Project purpose",
+                "Consumer responsibilities",
+                "Vendor responsibilities",
+                "Site survey and feasibility",
+                "Design and engineering",
+                "Procurement and supply",
+                "Installation and documentation",
+                "Warranty and maintenance",
+                "Grid connectivity",
+                "Subsidy documentation",
+                "Plant performance",
+                "Payment and disputes",
+                "Signatures and disclaimer",
+              ],
+            },
+            active: true,
+          })
+          .select("id,version")
+          .single();
+        if (createError) {
+          console.error("Agreement template create error:", createError);
+          throw new AppError(
+            500,
+            createError.message || "Failed to create default agreement template",
+            "TEMPLATE_NOT_CONFIGURED",
+          );
+        }
+        if (!newTemplate) {
+          throw new AppError(
+            409,
+            "No active agreement template is configured",
+            "TEMPLATE_NOT_CONFIGURED",
+          );
+        }
+        template = newTemplate;
+      }
+      const creatorId = req.auth?.userId;
+      let validCreatedBy: string | null = null;
+      if (creatorId) {
+        const { data: userProfile } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("id", creatorId)
+          .maybeSingle();
+        if (userProfile) validCreatedBy = creatorId;
+      }
       const { data, error } = await admin
         .from("agreements")
         .insert({
@@ -1236,8 +1245,12 @@ agreementsRouter.post(
         .select()
         .single();
       if (error) {
-        console.error("Supabase insert agreement error:", error);
-        throw new AppError(400, error.message || "Failed to insert agreement", "DATABASE_ERROR");
+        console.error("Supabase insert agreement error:", JSON.stringify(error));
+        throw new AppError(
+          error.code === "23503" ? 422 : 400,
+          error.message || "Failed to insert agreement",
+          "DATABASE_ERROR",
+        );
       }
       return success(res.status(201), "Agreement draft created", data);
     } catch (err) {
