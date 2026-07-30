@@ -79,6 +79,8 @@
 @media(max-width:1250px){.invoice-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.invoice-footer{grid-template-columns:1fr 320px}}
 @media(max-width:1200px){.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:850px){.app-layout{grid-template-columns:1fr}.app-top{height:64px;padding:0 16px}.app-page{padding:24px 16px 48px}.operational-form{grid-template-columns:1fr}.toolbar{width:100%}.toolbar input{min-width:0}.page-bar{align-items:flex-start}.role-grid{grid-template-columns:repeat(2,1fr)}.back-button span{display:none}.back-button{width:36px;padding:0;justify-content:center}.header-context{gap:8px}}
+.app-user>.mobile-back-button{display:none}
+@media(max-width:850px){.header-context>.desktop-back-button,.app-user>.desktop-notification-button{display:none}.app-user>.mobile-back-button{display:flex}}
 @media(max-width:850px){.installation-card{grid-template-columns:1fr}}
 @media(max-width:760px){.invoice-form{padding:18px}.invoice-fields,.invoice-footer{grid-template-columns:1fr}.invoice-products-head{align-items:stretch}.invoice-products-head select{width:100%}}
 @media(max-width:700px){.operational-form:has(>h2 + .detail-grid):not(.invoice-form){padding:18px}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.detail-grid{grid-template-columns:1fr}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.page-bar{align-items:stretch}.operational-form:has(>h2 + .detail-grid):not(.invoice-form)>.page-bar select{width:100%}}
