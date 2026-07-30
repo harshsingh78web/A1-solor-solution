@@ -295,6 +295,7 @@ export function ProjectsPage() {
   const isInstaller = Boolean(user?.roles.includes("installation_staff"));
   const canAssign =
     Boolean(user?.roles.includes("super_admin")) ||
+    Boolean(user?.roles.includes("admin")) ||
     Boolean(user?.permissions.includes("projects:assign"));
   const load = async () => {
     setLoading(true);
@@ -664,9 +665,11 @@ export function QuotationsPage() {
     [selectedProductId, setSelectedProductId] = useState(""),
     canCreate =
       user?.roles.includes("super_admin") ||
+      user?.roles.includes("admin") ||
       user?.permissions.includes("quotations:create"),
     canDelete =
       user?.roles.includes("super_admin") ||
+      user?.roles.includes("admin") ||
       user?.permissions.includes("quotations:delete");
   const load = async () => {
     setLoading(true);
@@ -722,6 +725,21 @@ export function QuotationsPage() {
       );
       if (capacityField) capacityField.value = capacityMatch[1];
     }
+  };
+  const addCustomItem = () => {
+    setItems((current) => [
+      ...current,
+      {
+        productId: "",
+        productName: "Solar System Item",
+        description: "Solar Equipment & Accessories",
+        brand: "Standard",
+        quantity: 1,
+        unitPrice: 15000,
+        cgstRate: 6,
+        sgstRate: 6,
+      },
+    ]);
   };
   useEffect(() => {
     const field = document.querySelector<HTMLInputElement>(
@@ -877,25 +895,34 @@ export function QuotationsPage() {
           </label>
           <div className="page-bar">
             <h3>Products</h3>
-            <select
-              aria-label="Add product"
-              value={selectedProductId}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (id) addProduct(id);
-                setSelectedProductId("");
-              }}
-            >
-              <option value="">Select from database…</option>
-              {products
-                .filter((p) => p.active !== false)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
-            <small>Select a product to auto-fill all line details.</small>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <select
+                aria-label="Add product"
+                value={selectedProductId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (id) addProduct(id);
+                  setSelectedProductId("");
+                }}
+              >
+                <option value="">Select from database…</option>
+                {products
+                  .filter((p) => p.active !== false)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="secondary"
+                onClick={addCustomItem}
+              >
+                + Add Custom Item
+              </button>
+            </div>
+            <small>Select from database or click + Add Custom Item.</small>
           </div>
           {items.map((item, index) => (
             <div className="card" key={`${item.productId}-${index}`}>
@@ -1076,12 +1103,15 @@ export function InvoicesPage() {
     [editing, setEditing] = useState<Row | null>(null);
   const canCreate =
     user?.roles.includes("super_admin") ||
+    user?.roles.includes("admin") ||
     user?.permissions.includes("invoices:create");
   const canUpdate =
       user?.roles.includes("super_admin") ||
+      user?.roles.includes("admin") ||
       user?.permissions.includes("invoices:update"),
     canDelete =
       user?.roles.includes("super_admin") ||
+      user?.roles.includes("admin") ||
       user?.permissions.includes("invoices:delete");
   const load = async () => {
     setLoading(true);
@@ -1128,6 +1158,21 @@ export function InvoicesPage() {
     setTitle(
       `FOR ${p.name.toUpperCase()}${invoiceType ? ` — ${invoiceType.toUpperCase()}` : ""}`,
     );
+  };
+  const addCustomItem = () => {
+    setItems((current) => [
+      ...current,
+      {
+        productId: "",
+        productName: "Solar System Item",
+        description: "Solar Equipment & Accessories",
+        brand: "Standard",
+        quantity: 1,
+        unitPrice: 15000,
+        cgstRate: 6,
+        sgstRate: 6,
+      },
+    ]);
   };
   const update = (index: number, key: keyof QuoteItem, value: string) =>
     setItems((current) =>
@@ -1357,25 +1402,34 @@ export function InvoicesPage() {
                 saving.
               </p>
             </div>
-            <select
-              aria-label="Add invoice product"
-              value={selectedProductId}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (id) addProduct(id);
-                setSelectedProductId("");
-              }}
-            >
-              <option value="">Select from database…</option>
-              {products
-                .filter((p) => p.active !== false)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
-            <small>Select a product to auto-fill all line details.</small>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <select
+                aria-label="Add invoice product"
+                value={selectedProductId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (id) addProduct(id);
+                  setSelectedProductId("");
+                }}
+              >
+                <option value="">Select from database…</option>
+                {products
+                  .filter((p) => p.active !== false)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="secondary"
+                onClick={addCustomItem}
+              >
+                + Add Custom Item
+              </button>
+            </div>
+            <small>Select from database or click + Add Custom Item.</small>
           </div>
           <div className="invoice-items">
             {items.map((item, index) => (
@@ -1654,11 +1708,18 @@ export function AgreementsPage() {
   const canCreate =
     !isCustomer &&
     (Boolean(user?.roles.includes("super_admin")) ||
+      Boolean(user?.roles.includes("admin")) ||
       Boolean(user?.permissions.includes("agreements:create")));
   const canVerifyPayment =
     !isCustomer &&
     (Boolean(user?.roles.includes("super_admin")) ||
+      Boolean(user?.roles.includes("admin")) ||
       Boolean(user?.permissions.includes("payments:create")));
+  const canDelete =
+    !isCustomer &&
+    (Boolean(user?.roles.includes("super_admin")) ||
+      Boolean(user?.roles.includes("admin")) ||
+      Boolean(user?.permissions.includes("agreements:delete")));
   const availableQuotes = isCustomer
     ? quotes
     : quotes.filter(
@@ -1719,9 +1780,17 @@ export function AgreementsPage() {
       if (error) return toast.error(error.message);
     }
     try {
+      const payload = {
+        customerId: data.customerId,
+        quotationId: data.quotationId,
+        consumerAddress: data.consumerAddress,
+        agreementDate: data.agreementDate,
+        paymentTerms: data.paymentTerms,
+        customerSignaturePath,
+      };
       await api("/agreements", {
         method: "POST",
-        body: JSON.stringify({ ...data, customerSignaturePath }),
+        body: JSON.stringify(payload),
       });
       toast.success("Agreement created");
       setOpen(false);
@@ -1789,6 +1858,19 @@ export function AgreementsPage() {
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Verification failed",
+      );
+    }
+  };
+  const removeAgreement = async (row: Row) => {
+    const numberStr = text(row.agreement_number);
+    if (!confirm(`Are you sure you want to delete agreement ${numberStr}?`)) return;
+    try {
+      await api(`/agreements/${text(row.id)}`, { method: "DELETE" });
+      toast.success(`Agreement ${numberStr} removed`);
+      await load();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to remove agreement",
       );
     }
   };
@@ -1949,6 +2031,14 @@ export function AgreementsPage() {
                             Verify payment
                           </button>
                         )}
+                      {canDelete && (
+                        <button
+                          className="danger"
+                          onClick={() => void removeAgreement(row)}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

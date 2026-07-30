@@ -1,6 +1,6 @@
 # Role Functionality Audit
 
-Generated: 2026-07-29T09:55:19.979Z
+Generated: 2026-07-30T06:31:31.463Z
 
 This report validates real Supabase password login, JWT-backed API authorization, expected allow/deny behavior, and own-profile access. No secret values are included.
 

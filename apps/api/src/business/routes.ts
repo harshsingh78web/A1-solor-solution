@@ -89,7 +89,7 @@ dashboardRouter.get(
       if (isCustomer && column)
         q = q.eq(column, cid ?? "00000000-0000-0000-0000-000000000000");
       const { count, error } = await q;
-      if (error) throw error;
+      if (error) throw new AppError(400, error.message, "DATABASE_ERROR");
       return count ?? 0;
     };
     const entries: ReadonlyArray<
@@ -137,7 +137,7 @@ customersRouter.get(
         `name.ilike.%${String(req.query.search).replace(/[%_,]/g, "")}%,mobile.ilike.%${String(req.query.search).replace(/[%_,]/g, "")}%`,
       );
     const { data, error } = await q;
-    if (error) throw error;
+    if (error) throw new AppError(400, error.message, "DATABASE_ERROR");
     return success(res, "Customers retrieved", data);
   }),
 );
@@ -204,7 +204,7 @@ productsRouter.get(
         `name.ilike.%${String(req.query.search).replace(/[%_,]/g, "")}%,sku.ilike.%${String(req.query.search).replace(/[%_,]/g, "")}%`,
       );
     const { data, error } = await q;
-    if (error) throw error;
+    if (error) throw new AppError(400, error.message, "DATABASE_ERROR");
     return success(res, "Products retrieved", data);
   }),
 );
@@ -641,7 +641,7 @@ invoicesRouter.get(
       .order("created_at", { ascending: false });
     q = await scope(req, q);
     const { data, error } = await q;
-    if (error) throw error;
+    if (error) throw new AppError(400, error.message, "DATABASE_ERROR");
     return success(res, "Invoices retrieved", data);
   }),
 );
@@ -1121,64 +1121,164 @@ agreementsRouter.post(
           "FORBIDDEN",
         );
     }
-    if (
-      !agreementCustomerId ||
-      !b.quotationId ||
-      !b.consumerAddress ||
-      !b.agreementDate
-    )
+    if (!agreementCustomerId || !b.consumerAddress || !b.agreementDate)
       throw new AppError(
         400,
-        "Customer, quotation, address and agreement date are required",
+        "Customer, address and agreement date are required",
         "VALIDATION_ERROR",
       );
     const admin = db();
-    const { data: selectedQuote, error: quoteError } = await admin
-      .from("quotations")
-      .select("id,customer_id")
-      .eq("id", b.quotationId)
-      .maybeSingle();
-    if (quoteError)
-      throw new AppError(400, quoteError.message, "DATABASE_ERROR");
-    if (!selectedQuote || selectedQuote.customer_id !== agreementCustomerId)
-      throw new AppError(
-        400,
-        "Selected quotation does not belong to the selected customer",
-        "QUOTATION_CUSTOMER_MISMATCH",
-      );
-    const { data: template } = await admin
+    let validQuotationId: string | null = null;
+    if (b.quotationId && String(b.quotationId).trim() !== "") {
+      const { data: selectedQuote } = await admin
+        .from("quotations")
+        .select("id,customer_id")
+        .eq("id", b.quotationId)
+        .maybeSingle();
+      if (
+        selectedQuote &&
+        String(selectedQuote.customer_id) === String(agreementCustomerId)
+      ) {
+        validQuotationId = selectedQuote.id;
+      }
+    }
+    if (!validQuotationId) {
+      const { data: latestQuote } = await admin
+        .from("quotations")
+        .select("id")
+        .eq("customer_id", agreementCustomerId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestQuote) validQuotationId = latestQuote.id;
+    }
+    let { data: template, error: templateError } = await admin
       .from("agreement_templates")
       .select("id,version")
       .eq("active", true)
       .order("version", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!template)
+    if (templateError) {
+      throw new AppError(400, templateError.message, "DATABASE_ERROR");
+    }
+    if (!template) {
+      const { data: newTemplate, error: createError } = await admin
+        .from("agreement_templates")
+        .insert({
+          name: "PM Surya Ghar Consumer Vendor Agreement",
+          scheme_name: "PM Surya Ghar: Muft Bijli Yojana",
+          version: 1,
+          body: {
+            title:
+              "Agreement between Consumer and Vendor for installation of a grid-connected rooftop solar project",
+            sections: [
+              "Consumer and vendor identification",
+              "Project purpose",
+              "Consumer responsibilities",
+              "Vendor responsibilities",
+              "Site survey and feasibility",
+              "Design and engineering",
+              "Procurement and supply",
+              "Installation and documentation",
+              "Warranty and maintenance",
+              "Grid connectivity",
+              "Subsidy documentation",
+              "Plant performance",
+              "Payment and disputes",
+              "Signatures and disclaimer",
+            ],
+          },
+          active: true,
+        })
+        .select("id,version")
+        .single();
+
+      if (createError || !newTemplate) {
+        throw new AppError(
+          409,
+          "No active agreement template is configured",
+          "TEMPLATE_NOT_CONFIGURED",
+        );
+      }
+      template = newTemplate;
+    }
+    const creatorId = req.auth?.userId;
+    let validCreatedBy: string | null = null;
+    if (creatorId) {
+      const { data: userProfile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("id", creatorId)
+        .maybeSingle();
+      if (userProfile) validCreatedBy = creatorId;
+    }
+    try {
+      const { data, error } = await admin
+        .from("agreements")
+        .insert({
+          agreement_number: number("AGR"),
+          customer_id: agreementCustomerId,
+          quotation_id: validQuotationId,
+          template_id: template.id,
+          status: "Draft",
+          payment_status: "Unpaid",
+          payment_amount: 1,
+          customer_signature_path: b.customerSignaturePath || null,
+          merged_data: {
+            consumer_address: b.consumerAddress,
+            agreement_date: b.agreementDate,
+            payment_terms: b.paymentTerms || null,
+            template_version: template.version,
+          },
+          created_by: validCreatedBy,
+        })
+        .select()
+        .single();
+      if (error) {
+        console.error("Supabase insert agreement error:", error);
+        throw new AppError(400, error.message || "Failed to insert agreement", "DATABASE_ERROR");
+      }
+      return success(res.status(201), "Agreement draft created", data);
+    } catch (err) {
+      console.error("Error creating agreement:", err);
+      if (err instanceof AppError) throw err;
       throw new AppError(
-        409,
-        "No active agreement template is configured",
-        "TEMPLATE_NOT_CONFIGURED",
+        500,
+        err instanceof Error ? err.message : "Unable to create agreement",
+        "AGREEMENT_CREATION_FAILED",
       );
-    const { data, error } = await admin
+    }
+  }),
+);
+agreementsRouter.delete(
+  "/:id",
+  requirePermission("agreements:delete"),
+  asyncHandler(async (req, res) => {
+    if (req.auth!.roles.includes("customer"))
+      throw new AppError(
+        403,
+        "Customers cannot delete agreements",
+        "FORBIDDEN",
+      );
+    const admin = db();
+    const { data: existing, error: findError } = await admin
       .from("agreements")
-      .insert({
-        agreement_number: number("AGR"),
-        customer_id: agreementCustomerId,
-        quotation_id: b.quotationId,
-        template_id: template.id,
-        customer_signature_path: b.customerSignaturePath || null,
-        merged_data: {
-          consumer_address: b.consumerAddress,
-          agreement_date: b.agreementDate,
-          payment_terms: b.paymentTerms || null,
-          template_version: template.version,
-        },
-        created_by: req.auth!.userId,
-      })
-      .select()
-      .single();
-    if (error) throw new AppError(400, error.message, "DATABASE_ERROR");
-    return success(res.status(201), "Agreement draft created", data);
+      .select("id,agreement_number")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (findError) throw new AppError(400, findError.message, "DATABASE_ERROR");
+    if (!existing)
+      throw new AppError(404, "Agreement not found", "NOT_FOUND");
+
+    const { error: deleteError } = await admin
+      .from("agreements")
+      .delete()
+      .eq("id", req.params.id);
+    if (deleteError)
+      throw new AppError(400, deleteError.message, "DATABASE_ERROR");
+
+    return success(res, "Agreement deleted successfully", { id: req.params.id });
   }),
 );
 

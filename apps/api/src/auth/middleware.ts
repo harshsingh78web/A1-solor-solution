@@ -16,8 +16,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   req.auth=context; return next();
 }
 export const requireRole = (...roles: AppRole[]) => (req:Request,_res:Response,next:NextFunction) =>
-  req.auth?.roles.some((role)=>roles.includes(role)) ? next() : next(new AppError(403,"Role is not authorized","FORBIDDEN"));
+  req.auth?.roles.includes("super_admin") || req.auth?.roles.includes("admin") || roles.some((role)=>req.auth?.roles.includes(role)) ? next() : next(new AppError(403,"Role is not authorized","FORBIDDEN"));
 export const requirePermission = (permission:string) => (req:Request,_res:Response,next:NextFunction) =>
-  req.auth?.roles.includes("super_admin") || req.auth?.permissions.includes(permission) ? next() : next(new AppError(403,"Permission denied","FORBIDDEN"));
+  req.auth?.roles.includes("super_admin") || req.auth?.roles.includes("admin") || req.auth?.permissions.includes(permission) ? next() : next(new AppError(403,"Permission denied","FORBIDDEN"));
 export const requireAnyPermission = (...permissions:string[]) => (req:Request,_res:Response,next:NextFunction) =>
-  req.auth?.roles.includes("super_admin") || permissions.some((key)=>req.auth?.permissions.includes(key)) ? next() : next(new AppError(403,"Permission denied","FORBIDDEN"));
+  req.auth?.roles.includes("super_admin") || req.auth?.roles.includes("admin") || permissions.some((key)=>req.auth?.permissions.includes(key)) ? next() : next(new AppError(403,"Permission denied","FORBIDDEN"));

@@ -107,6 +107,7 @@ export function AppShell() {
     navigate = useNavigate();
   const allowed = (permission: string) =>
     user?.roles.includes("super_admin") ||
+    user?.roles.includes("admin") ||
     user?.permissions.includes(permission);
   const crumb =
     items.find((i) => i.to === location.pathname)?.label ?? "Workspace";

@@ -47,37 +47,40 @@ const allowedOrigins = new Set(
     .map((origin) => origin?.trim().replace(/\/$/, ""))
     .filter((origin): origin is string => Boolean(origin)),
 );
-const isAllowedVercelOrigin = (origin: string) => {
+
+const isAllowedOrigin = (origin: string) => {
   try {
     const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
     return (
-      process.env.VERCEL === "1" &&
-      url.protocol === "https:" &&
-      url.hostname.endsWith(".vercel.app")
+      host.endsWith(".vercel.app") ||
+      host.endsWith(".onrender.com") ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.includes("a1-solor-solution") ||
+      host.includes("a1solar")
     );
   } catch {
     return false;
   }
 };
+
 if (process.env.NODE_ENV !== "production") {
   allowedOrigins.add("http://localhost:5173");
   allowedOrigins.add("http://localhost:5174");
   allowedOrigins.add("http://127.0.0.1:4173");
 }
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (
-        !origin ||
-        allowedOrigins.has(origin) ||
-        isAllowedVercelOrigin(origin)
-      )
+      if (!origin || allowedOrigins.has(origin) || isAllowedOrigin(origin))
         return callback(null, true);
-      return callback(new Error("Origin is not allowed by CORS"));
+      return callback(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-request-id"],
   }),
 );
 app.use(compression());
@@ -182,13 +185,18 @@ app.use((_req, res) =>
   }),
 );
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (error instanceof AppError)
-    return res.status(error.status).json({
+  if (
+    error instanceof AppError ||
+    (typeof error === "object" && error !== null && "status" in error && "message" in error)
+  ) {
+    const errObj = error as { status?: number; message?: string; code?: string; errors?: unknown[] };
+    return res.status(errObj.status || 500).json({
       success: false,
-      message: error.message,
-      code: error.code,
-      errors: error.errors,
+      message: errObj.message || "An error occurred",
+      code: errObj.code || "INTERNAL_ERROR",
+      errors: errObj.errors || [],
     });
+  }
   const issues =
     typeof error === "object" && error !== null && "issues" in error
       ? (error as { issues: unknown }).issues
@@ -200,10 +208,20 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
       code: "VALIDATION_ERROR",
       errors: issues,
     });
+  const message =
+    typeof error === "object" && error !== null && "message" in error && typeof (error as { message: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : error instanceof Error
+        ? error.message
+        : "An unexpected error occurred";
+  const code =
+    typeof error === "object" && error !== null && "code" in error && typeof (error as { code: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : "INTERNAL_ERROR";
   return res.status(500).json({
     success: false,
-    message: "An unexpected error occurred",
-    code: "INTERNAL_ERROR",
+    message,
+    code,
     errors: [],
   });
 });
