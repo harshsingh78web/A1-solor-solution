@@ -1646,6 +1646,7 @@ export function AgreementsPage() {
     [rows, setRows] = useState<Row[]>([]),
     [customers, setCustomers] = useState<QuoteCustomer[]>([]),
     [quotes, setQuotes] = useState<Row[]>([]),
+    [selectedCustomerId, setSelectedCustomerId] = useState(""),
     [open, setOpen] = useState(false),
     [payingId, setPayingId] = useState<string | null>(null),
     [loading, setLoading] = useState(true);
@@ -1658,6 +1659,11 @@ export function AgreementsPage() {
     !isCustomer &&
     (Boolean(user?.roles.includes("super_admin")) ||
       Boolean(user?.permissions.includes("payments:create")));
+  const availableQuotes = isCustomer
+    ? quotes
+    : quotes.filter(
+        (quote) => text(quote.customer_id) === selectedCustomerId,
+      );
   const load = async () => {
     setLoading(true);
     try {
@@ -1687,6 +1693,17 @@ export function AgreementsPage() {
         (item) => text(item.id) === text(data.quotationId),
       );
       data.customerId = String(quote?.customer_id ?? "");
+    } else {
+      const selectedQuote = quotes.find(
+        (item) => text(item.id) === text(data.quotationId),
+      );
+      if (
+        !selectedQuote ||
+        text(selectedQuote.customer_id) !== text(data.customerId)
+      )
+        return toast.error(
+          "Select a quotation belonging to the selected customer",
+        );
     }
     let customerSignaturePath: string | undefined;
     if (file?.size) {
@@ -1708,6 +1725,7 @@ export function AgreementsPage() {
       });
       toast.success("Agreement created");
       setOpen(false);
+      setSelectedCustomerId("");
       await load();
     } catch (error) {
       toast.error(
@@ -1798,7 +1816,12 @@ export function AgreementsPage() {
           {!isCustomer && (
             <label>
               Customer Name
-              <select name="customerId" required>
+              <select
+                name="customerId"
+                required
+                value={selectedCustomerId}
+                onChange={(event) => setSelectedCustomerId(event.target.value)}
+              >
                 <option value="">Select customer</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -1810,9 +1833,20 @@ export function AgreementsPage() {
           )}
           <label>
             Related quotation
-            <select name="quotationId" required>
-              <option value="">Select quotation</option>
-              {quotes.map((q) => (
+            <select
+              key={selectedCustomerId}
+              name="quotationId"
+              required
+              disabled={!isCustomer && !selectedCustomerId}
+            >
+              <option value="">
+                {!isCustomer && !selectedCustomerId
+                  ? "Select customer first"
+                  : availableQuotes.length
+                    ? "Select quotation"
+                    : "No quotation available for this customer"}
+              </option>
+              {availableQuotes.map((q) => (
                 <option key={text(q.id)} value={text(q.id)}>
                   {text(q.quotation_number)} —{" "}
                   {text((q.customers as Row | undefined)?.name)}

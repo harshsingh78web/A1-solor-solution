@@ -1133,6 +1133,19 @@ agreementsRouter.post(
         "VALIDATION_ERROR",
       );
     const admin = db();
+    const { data: selectedQuote, error: quoteError } = await admin
+      .from("quotations")
+      .select("id,customer_id")
+      .eq("id", b.quotationId)
+      .maybeSingle();
+    if (quoteError)
+      throw new AppError(400, quoteError.message, "DATABASE_ERROR");
+    if (!selectedQuote || selectedQuote.customer_id !== agreementCustomerId)
+      throw new AppError(
+        400,
+        "Selected quotation does not belong to the selected customer",
+        "QUOTATION_CUSTOMER_MISMATCH",
+      );
     const { data: template } = await admin
       .from("agreement_templates")
       .select("id,version")
