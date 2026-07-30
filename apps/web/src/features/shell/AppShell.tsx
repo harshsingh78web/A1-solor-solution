@@ -1,7 +1,6 @@
 import {
   ArrowLeft,
   BarChart3,
-  Bell,
   ChevronRight,
   FileText,
   LayoutDashboard,
@@ -148,6 +147,12 @@ export function AppShell() {
             <Menu />
           </button>
           <div className="header-context">
+            <div>
+              <small>Workspace</small>
+              <b>{crumb}</b>
+            </div>
+          </div>
+          <div className="app-user">
             <button
               className="back-button"
               aria-label="Go back"
@@ -157,15 +162,6 @@ export function AppShell() {
             >
               <ArrowLeft />
               <span>Back</span>
-            </button>
-            <div>
-              <small>Workspace</small>
-              <b>{crumb}</b>
-            </div>
-          </div>
-          <div className="app-user">
-            <button aria-label="Notifications">
-              <Bell />
             </button>
             <span>
               {user?.fullName}
