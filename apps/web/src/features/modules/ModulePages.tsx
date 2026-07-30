@@ -1754,12 +1754,12 @@ export function AgreementsPage() {
         (item) => text(item.id) === text(data.quotationId),
       );
       data.customerId = String(quote?.customer_id ?? "");
-    } else {
+    } else if (data.quotationId) {
       const selectedQuote = quotes.find(
         (item) => text(item.id) === text(data.quotationId),
       );
       if (
-        !selectedQuote ||
+        selectedQuote &&
         text(selectedQuote.customer_id) !== text(data.customerId)
       )
         return toast.error(
