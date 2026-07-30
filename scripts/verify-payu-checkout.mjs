@@ -5,13 +5,14 @@ const api = process.env.ROLE_AUDIT_API_URL ?? "http://127.0.0.1:5000/api/v1";
 const credentials = JSON.parse(
   fs.readFileSync(".auth/e2e-credentials.json", "utf8"),
 );
+const testUser = process.env.PAYU_TEST_USER ?? "CUSTOMER_A";
 const auth = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY,
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 const { data, error } = await auth.auth.signInWithPassword(
-  credentials.CUSTOMER_A,
+  credentials[testUser],
 );
 if (error || !data.session) throw new Error("Customer login failed");
 const headers = {
@@ -54,6 +55,17 @@ const saltProtected =
   );
 const testMode = checkout?.action === "https://test.payu.in/_payment";
 const hashShape = /^[a-f0-9]{128}$/.test(checkout?.fields?.hash ?? "");
+const gatewayResponse = checkout
+  ? await fetch(checkout.action, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(checkout.fields),
+    })
+  : null;
+const gatewayAccepted = Boolean(
+  gatewayResponse && [200, 302, 303].includes(gatewayResponse.status),
+);
 
 const forgedCallback = await fetch(`${api}/payments/payu/callback`, {
   method: "POST",
@@ -75,6 +87,7 @@ const passed =
   saltProtected &&
   testMode &&
   hashShape &&
+  gatewayAccepted &&
   forgedBlocked;
 
 console.log(`Customer PayU checkout: ${checkoutResponse.ok ? "passed" : "failed"}`);
@@ -82,6 +95,7 @@ console.log(`Required checkout fields: ${fieldsComplete ? "configured" : "missin
 console.log(`Merchant salt exposure: ${saltProtected ? "blocked" : "failed"}`);
 console.log(`PayU environment: ${testMode ? "test" : "incorrect"}`);
 console.log(`SHA-512 request hash: ${hashShape ? "configured" : "failed"}`);
+console.log(`PayU test gateway form: ${gatewayAccepted ? "accepted" : "rejected"}`);
 console.log(`Forged success callback: ${forgedBlocked ? "blocked" : "failed"}`);
 console.log(`PayU integration verification: ${passed ? "passed" : "failed"}`);
 
